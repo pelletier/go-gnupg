@@ -3,9 +3,8 @@ package gnupg
 import (
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"os/exec"
+	"regexp"
 	"strings"
 )
 
@@ -25,49 +24,22 @@ func InitGnupg() (*Gnupg, error) {
 
 func (gpg *Gnupg) execCommand(commands []string, input string) (string, error) {
 	cmd := exec.Command(gpg.Binary, commands...)
-	stdout, err := cmd.StdoutPipe()
 
-	c := make(chan string)
-	go func() {
-		b, _ := ioutil.ReadAll(stdout)
-		c <- string(b)
-	}()
-
-	if err != nil {
-		return "", errors.New(fmt.Sprint("could not grab stdout pipe", err))
-	}
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return "", errors.New(fmt.Sprint("could not grab stdin pipe", err))
-	}
-	err = cmd.Start()
-	if err != nil {
-		return "", errors.New(fmt.Sprint("could not start gpg program", err))
-	}
 	if len(input) > 0 {
-		fmt.Println("writing")
-		i, err := io.WriteString(stdin, input)
-		if err != nil {
-			return "", errors.New(fmt.Sprint("could not write to stdin", err))
-		}
-		if i != len(input) {
-			return "", errors.New(fmt.Sprintf("wrote only %d out of %d bytes on stdin", i, len(input)))
-		}
+		cmd.Stdin = strings.NewReader(input)
 	}
 
-	se := <-c
-
-	cmd.Wait()
+	stdout, err := cmd.CombinedOutput()
 
 	if err != nil {
-		return "", errors.New(fmt.Sprint("could not retrieve gpg's output: ", err))
+		return "", errors.New(fmt.Sprint("gpg failed to run: ", err))
 	}
-	return se, nil
+	return string(stdout), nil
+
 }
 
 func (gpg *Gnupg) CreateKeys(email, name, comment, passkey string) (string, error) {
 	params := map[string]string{
-		"Key-Type":     "RSA",
 		"Key-Length":   "1024",
 		"Name-Real":    name,
 		"Name-Comment": comment,
@@ -76,11 +48,22 @@ func (gpg *Gnupg) CreateKeys(email, name, comment, passkey string) (string, erro
 		"Passphrase":   passkey,
 	}
 	var lines []string
+	// Special case for Key-Type, *has* to be the very first line
+	lines = append(lines, "Key-Type: RSA")
 	for key, value := range params {
 		line := fmt.Sprintf("%s: %s", key, value)
 		lines = append(lines, line)
 	}
 	lines = append(lines, "%commit", "")
 	input := strings.Join(lines, "\n")
-	return gpg.execCommand([]string{"--gen-key", "--batch"}, input)
+	output, err := gpg.execCommand([]string{"--gen-key", "--batch"}, input)
+	if err != nil {
+		return "", err
+	}
+	re := regexp.MustCompile("key ([A-Z0-9]+) marked as ultimately trusted")
+	matches := re.FindStringSubmatch(output)
+	if len(matches) != 2 {
+		return "", errors.New(fmt.Sprint("invalid gpg --gen-key output: ", output))
+	}
+	return matches[1], nil
 }
