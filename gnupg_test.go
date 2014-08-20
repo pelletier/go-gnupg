@@ -39,3 +39,16 @@ func TestGnupgExportPublicKey(t *testing.T) {
 		t.Fatalf("%s\ndoes not look like a valid armored public key", pkey)
 	}
 }
+
+func TestGnupgExportPrivateKey(t *testing.T) {
+	gpg, _ := InitGnupg()
+	keyid, _ := gpg.CreateKeyPair(1024, "me@foo.com", "myname", "comment", "qweqwe")
+	pkey, err := gpg.ExportPrivateKey(keyid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	re := regexp.MustCompile(`(?sm)^-----BEGIN PGP PRIVATE KEY BLOCK-----.*-----END PGP PRIVATE KEY BLOCK-----$`)
+	if !re.MatchString(pkey) {
+		t.Fatalf("%s\ndoes not look like a valid armored private key", pkey)
+	}
+}

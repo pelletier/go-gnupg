@@ -9,7 +9,8 @@ import (
 )
 
 type Gnupg struct {
-	Binary string
+	Binary  string
+	Homedir string
 }
 
 func InitGnupg() (*Gnupg, error) {
@@ -19,11 +20,13 @@ func InitGnupg() (*Gnupg, error) {
 		return nil, errors.New("gpg binary not found")
 	}
 	gpg.Binary = path
+	gpg.Homedir = "~/.gnupg" // there may be a smarter way to initialize that
 	return gpg, nil
 }
 
 func (gpg *Gnupg) execCommand(commands []string, input string) (string, error) {
-	cmd := exec.Command(gpg.Binary, commands...)
+	args := append([]string{"--homedir", gpg.Homedir}, commands...)
+	cmd := exec.Command(gpg.Binary, args...)
 
 	if len(input) > 0 {
 		cmd.Stdin = strings.NewReader(input)
@@ -73,6 +76,14 @@ func (gpg *Gnupg) CreateKeyPair(length int, email, name, comment, passkey string
 
 func (gpg *Gnupg) ExportPublicKey(keyid string) (string, error) {
 	output, err := gpg.execCommand([]string{"--export", "-a", keyid}, "")
+	if err != nil {
+		return "", err
+	}
+	return output, nil
+}
+
+func (gpg *Gnupg) ExportPrivateKey(keyid string) (string, error) {
+	output, err := gpg.execCommand([]string{"--export-secret-key", "-a", keyid}, "")
 	if err != nil {
 		return "", err
 	}
