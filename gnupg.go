@@ -38,9 +38,12 @@ func (gpg *Gnupg) execCommand(commands []string, input string) (string, error) {
 
 }
 
-func (gpg *Gnupg) CreateKeys(email, name, comment, passkey string) (string, error) {
+func (gpg *Gnupg) CreateKeyPair(length int, email, name, comment, passkey string) (string, error) {
+	if length != 1024 && length != 2048 {
+		return "", errors.New("Key length has to be 1024 or 2048")
+	}
 	params := map[string]string{
-		"Key-Length":   "1024",
+		"Key-Length":   string(length),
 		"Name-Real":    name,
 		"Name-Comment": comment,
 		"Name-Email":   email,
@@ -66,4 +69,12 @@ func (gpg *Gnupg) CreateKeys(email, name, comment, passkey string) (string, erro
 		return "", errors.New(fmt.Sprint("invalid gpg --gen-key output: ", output))
 	}
 	return matches[1], nil
+}
+
+func (gpg *Gnupg) ExportPublicKey(keyid string) (string, error) {
+	output, err := gpg.execCommand([]string{"--export", "-a", keyid}, "")
+	if err != nil {
+		return "", err
+	}
+	return output, nil
 }
