@@ -9,8 +9,9 @@ import (
 )
 
 type Gnupg struct {
-	Binary  string
-	Homedir string
+	Binary       string
+	Homedir      string
+	genkeyRegexp *regexp.Regexp
 }
 
 func InitGnupg() (*Gnupg, error) {
@@ -21,6 +22,8 @@ func InitGnupg() (*Gnupg, error) {
 	}
 	gpg.Binary = path
 	gpg.Homedir = "~/.gnupg" // there may be a smarter way to initialize that
+
+	gpg.genkeyRegexp = regexp.MustCompile("key ([A-Z0-9]+) marked as ultimately trusted")
 	return gpg, nil
 }
 
@@ -53,6 +56,7 @@ func (gpg *Gnupg) CreateKeyPair(length int, email, name, comment, passkey string
 		"Expire-Date":  "0",
 		"Passphrase":   passkey,
 	}
+
 	var lines []string
 	// Special case for Key-Type, *has* to be the very first line
 	lines = append(lines, "Key-Type: RSA")
@@ -62,12 +66,12 @@ func (gpg *Gnupg) CreateKeyPair(length int, email, name, comment, passkey string
 	}
 	lines = append(lines, "%commit", "")
 	input := strings.Join(lines, "\n")
+
 	output, err := gpg.execCommand([]string{"--gen-key", "--batch"}, input)
 	if err != nil {
 		return "", err
 	}
-	re := regexp.MustCompile("key ([A-Z0-9]+) marked as ultimately trusted")
-	matches := re.FindStringSubmatch(output)
+	matches := gpg.genkeyRegexp.FindStringSubmatch(output)
 	if len(matches) != 2 {
 		return "", errors.New(fmt.Sprint("invalid gpg --gen-key output: ", output))
 	}
