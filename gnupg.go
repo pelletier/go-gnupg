@@ -18,6 +18,7 @@ type Gnupg struct {
 	Homedir string // Path of gpg's homedir (where to store keys)
 }
 
+// Element of GPG's status output (for parsing command's results).
 type OutputChunk struct {
 	Key  string // Output line's key
 	Text string // Text attached to the line
