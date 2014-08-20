@@ -35,7 +35,7 @@ func InitGnupg() (*Gnupg, error) {
 
 // Execute the gpg binary given some args and optionnaly a string used as stdin.
 // Returns the stdout of the execution.
-func (gpg *Gnupg) execCommand(commands []string, input string) (string, error) {
+func (gpg *Gnupg) ExecCommand(commands []string, input string) (string, error) {
 	args := append([]string{"--homedir", gpg.Homedir}, commands...)
 	cmd := exec.Command(gpg.Binary, args...)
 
@@ -77,7 +77,7 @@ func (gpg *Gnupg) CreateKeyPair(length int, email, name, comment, passkey string
 	lines = append(lines, "%commit", "")
 	input := strings.Join(lines, "\n")
 
-	output, err := gpg.execCommand([]string{"--gen-key", "--batch"}, input)
+	output, err := gpg.ExecCommand([]string{"--gen-key", "--batch"}, input)
 	if err != nil {
 		return "", err
 	}
@@ -90,7 +90,7 @@ func (gpg *Gnupg) CreateKeyPair(length int, email, name, comment, passkey string
 
 // Returns the armored, ascii representation of the given public key.
 func (gpg *Gnupg) ExportPublicKey(keyid string) (string, error) {
-	output, err := gpg.execCommand([]string{"--export", "-a", keyid}, "")
+	output, err := gpg.ExecCommand([]string{"--export", "-a", keyid}, "")
 	if err != nil {
 		return "", err
 	}
@@ -99,7 +99,7 @@ func (gpg *Gnupg) ExportPublicKey(keyid string) (string, error) {
 
 // Returns the armored, ascii representation of the given private key.
 func (gpg *Gnupg) ExportPrivateKey(keyid string) (string, error) {
-	output, err := gpg.execCommand([]string{"--export-secret-key", "-a", keyid}, "")
+	output, err := gpg.ExecCommand([]string{"--export-secret-key", "-a", keyid}, "")
 	if err != nil {
 		return "", err
 	}
