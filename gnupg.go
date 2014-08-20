@@ -5,18 +5,22 @@
 package gnupg
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os/exec"
-	"regexp"
 	"strings"
 )
 
 // Wrapper object for executing commands agains the gpg binary.
 type Gnupg struct {
-	Binary       string // Path to the gpg binary
-	Homedir      string // Path of gpg's homedir (where to store keys)
-	genkeyRegexp *regexp.Regexp
+	Binary  string // Path to the gpg binary
+	Homedir string // Path of gpg's homedir (where to store keys)
+}
+
+type OutputChunk struct {
+	Key  string // Output line's key
+	Text string // Text attached to the line
 }
 
 // Builds a Gnupg object and initializes with sane defaults.
@@ -29,31 +33,54 @@ func InitGnupg() (*Gnupg, error) {
 	gpg.Binary = path
 	gpg.Homedir = "~/.gnupg" // there may be a smarter way to initialize that
 
-	gpg.genkeyRegexp = regexp.MustCompile("key ([A-Z0-9]+) marked as ultimately trusted")
 	return gpg, nil
 }
 
 // Execute the gpg binary given some args and optionnaly a string used as stdin.
-// Returns the stdout of the execution.
-func (gpg *Gnupg) ExecCommand(commands []string, input string) (string, error) {
-	args := append([]string{"--homedir", gpg.Homedir}, commands...)
+// Returns the stderr of the execution in form of OutputChunks and the stdout as a string.
+func (gpg *Gnupg) ExecCommand(commands []string, input string) ([]OutputChunk, string, error) {
+	args := append([]string{
+		"--status-fd", "2",
+		"--no-tty",
+		"--homedir", gpg.Homedir,
+	}, commands...)
 	cmd := exec.Command(gpg.Binary, args...)
 
 	if len(input) > 0 {
 		cmd.Stdin = strings.NewReader(input)
 	}
 
-	stdout, err := cmd.CombinedOutput()
+	var stderr, stdout bytes.Buffer
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+	err := cmd.Run()
 
 	if err != nil {
-		return "", errors.New(fmt.Sprint("gpg failed to run: ", err))
+		return nil, "", errors.New(fmt.Sprint("gpg failed to run: ", err))
 	}
-	return string(stdout), nil
 
+	// XXX Highly not optimised
+	allOutput := string(stderr.Bytes())
+	lines := strings.Split(allOutput, "\n")
+
+	var chunks = []OutputChunk{}
+	for _, line := range lines {
+		toks := strings.SplitN(line, " ", 3)
+		if toks[0] != "[GNUPG:]" {
+			continue
+		}
+		chunk := OutputChunk{toks[1], ""}
+		if len(toks) == 3 {
+			chunk.Text = toks[2]
+		}
+		chunks = append(chunks, chunk)
+	}
+
+	return chunks, string(stdout.Bytes()), nil
 }
 
 // Creates a pair of RSA public and private keys, protected by a passkey.
-// Returns the ID of the newly created key.
+// Returns the fingerprint of the newly created key.
 func (gpg *Gnupg) CreateKeyPair(length int, email, name, comment, passkey string) (string, error) {
 	if length != 1024 && length != 2048 {
 		return "", errors.New("Key length has to be 1024 or 2048")
@@ -77,20 +104,26 @@ func (gpg *Gnupg) CreateKeyPair(length int, email, name, comment, passkey string
 	lines = append(lines, "%commit", "")
 	input := strings.Join(lines, "\n")
 
-	output, err := gpg.ExecCommand([]string{"--gen-key", "--batch"}, input)
+	chunks, _, err := gpg.ExecCommand([]string{"--gen-key", "--batch"}, input)
 	if err != nil {
 		return "", err
 	}
-	matches := gpg.genkeyRegexp.FindStringSubmatch(output)
-	if len(matches) != 2 {
-		return "", errors.New(fmt.Sprint("invalid gpg --gen-key output: ", output))
+
+	fingerprint := ""
+	for _, chunk := range chunks {
+		if chunk.Key == "KEY_CREATED" {
+			toks := strings.Split(chunk.Text, " ")
+			fingerprint = toks[1]
+			break
+		}
 	}
-	return matches[1], nil
+
+	return fingerprint, nil
 }
 
 // Returns the armored, ascii representation of the given public key.
 func (gpg *Gnupg) ExportPublicKey(keyid string) (string, error) {
-	output, err := gpg.ExecCommand([]string{"--export", "-a", keyid}, "")
+	_, output, err := gpg.ExecCommand([]string{"--export", "-a", keyid}, "")
 	if err != nil {
 		return "", err
 	}
@@ -99,9 +132,16 @@ func (gpg *Gnupg) ExportPublicKey(keyid string) (string, error) {
 
 // Returns the armored, ascii representation of the given private key.
 func (gpg *Gnupg) ExportPrivateKey(keyid string) (string, error) {
-	output, err := gpg.ExecCommand([]string{"--export-secret-key", "-a", keyid}, "")
+	_, output, err := gpg.ExecCommand([]string{"--export-secret-key", "-a", keyid}, "")
 	if err != nil {
 		return "", err
 	}
 	return output, nil
+}
+
+// Delete a private key from the keyring.
+func (gpg *Gnupg) DeletePrivateKey(keyids ...string) error {
+	args := append([]string{"--batch", "--delete-secret-keys"}, keyids...)
+	_, _, err := gpg.ExecCommand(args, "")
+	return err
 }

@@ -52,3 +52,12 @@ func TestGnupgExportPrivateKey(t *testing.T) {
 		t.Fatalf("%s\ndoes not look like a valid armored private key", pkey)
 	}
 }
+
+func TestGnupgDeletePrivateKey(t *testing.T) {
+	gpg, _ := InitGnupg()
+	keyid, _ := gpg.CreateKeyPair(1024, "me@foo.com", "myname", "comment", "qweqwe")
+	err := gpg.DeletePrivateKey(keyid)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
