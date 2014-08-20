@@ -145,3 +145,19 @@ func (gpg *Gnupg) DeletePrivateKey(keyids ...string) error {
 	_, _, err := gpg.ExecCommand(args, "")
 	return err
 }
+
+// Delete a public key from the keyring.
+func (gpg *Gnupg) DeletePublicKey(keyids ...string) error {
+	args := append([]string{"--batch", "--delete-keys"}, keyids...)
+	_, _, err := gpg.ExecCommand(args, "")
+	return err
+}
+
+// Delete both the private and public key from the keyring.
+func (gpg *Gnupg) DeleteKeys(keyids ...string) error {
+	err := gpg.DeletePrivateKey(keyids...)
+	if err != nil {
+		return err
+	}
+	return gpg.DeletePublicKey(keyids...)
+}

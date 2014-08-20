@@ -61,3 +61,22 @@ func TestGnupgDeletePrivateKey(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestGnupgDeletePublicKey(t *testing.T) {
+	gpg, _ := InitGnupg()
+	keyid, _ := gpg.CreateKeyPair(1024, "me@foo.com", "myname", "comment", "qweqwe")
+	gpg.DeletePrivateKey(keyid)
+	err := gpg.DeletePublicKey(keyid)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGnupgDeleteKeys(t *testing.T) {
+	gpg, _ := InitGnupg()
+	keyid, _ := gpg.CreateKeyPair(1024, "me@foo.com", "myname", "comment", "qweqwe")
+	err := gpg.DeleteKeys(keyid)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
