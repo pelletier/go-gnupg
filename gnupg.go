@@ -1,3 +1,7 @@
+// GnuPG wrapper
+//
+// Simple wrapper around the gpg binary.
+
 package gnupg
 
 import (
@@ -8,12 +12,14 @@ import (
 	"strings"
 )
 
+// Wrapper object for executing commands agains the gpg binary.
 type Gnupg struct {
-	Binary       string
-	Homedir      string
+	Binary       string // Path to the gpg binary
+	Homedir      string // Path of gpg's homedir (where to store keys)
 	genkeyRegexp *regexp.Regexp
 }
 
+// Builds a Gnupg object and initializes with sane defaults.
 func InitGnupg() (*Gnupg, error) {
 	gpg := new(Gnupg)
 	path, err := exec.LookPath("gpg")
@@ -27,6 +33,8 @@ func InitGnupg() (*Gnupg, error) {
 	return gpg, nil
 }
 
+// Execute the gpg binary given some args and optionnaly a string used as stdin.
+// Returns the stdout of the execution.
 func (gpg *Gnupg) execCommand(commands []string, input string) (string, error) {
 	args := append([]string{"--homedir", gpg.Homedir}, commands...)
 	cmd := exec.Command(gpg.Binary, args...)
@@ -44,6 +52,8 @@ func (gpg *Gnupg) execCommand(commands []string, input string) (string, error) {
 
 }
 
+// Creates a pair of RSA public and private keys, protected by a passkey.
+// Returns the ID of the newly created key.
 func (gpg *Gnupg) CreateKeyPair(length int, email, name, comment, passkey string) (string, error) {
 	if length != 1024 && length != 2048 {
 		return "", errors.New("Key length has to be 1024 or 2048")
@@ -78,6 +88,7 @@ func (gpg *Gnupg) CreateKeyPair(length int, email, name, comment, passkey string
 	return matches[1], nil
 }
 
+// Returns the armored, ascii representation of the given public key.
 func (gpg *Gnupg) ExportPublicKey(keyid string) (string, error) {
 	output, err := gpg.execCommand([]string{"--export", "-a", keyid}, "")
 	if err != nil {
@@ -86,6 +97,7 @@ func (gpg *Gnupg) ExportPublicKey(keyid string) (string, error) {
 	return output, nil
 }
 
+// Returns the armored, ascii representation of the given private key.
 func (gpg *Gnupg) ExportPrivateKey(keyid string) (string, error) {
 	output, err := gpg.execCommand([]string{"--export-secret-key", "-a", keyid}, "")
 	if err != nil {
