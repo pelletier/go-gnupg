@@ -24,6 +24,9 @@ fmt.Println(pubkey)
 fmt.Println(privkey)
 ```
 
+See the documentation bellow for all the methods. Also, this is a small library,
+take a look at the code!
+
 ## Documentation
 
 The documentation is available at
