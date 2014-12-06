@@ -174,9 +174,11 @@ func (gpg *Gnupg) DeleteKeys(keyids ...string) error {
 
 // Change the passkey of a private key
 func (gpg *Gnupg) ChangePasskey(keyid, oldpasskey, newpasskey string) error {
-	args := append([]string{"--command-fd", "0",
-							"--passphrase-repeat", "0",
-							"--edit-key", keyid,})
+	args := append([]string{
+		"--command-fd", "0",
+		"--passphrase-repeat", "0",
+		"--edit-key", keyid,
+	})
 
 	var buffer bytes.Buffer
 	buffer.WriteString("passwd\n")
@@ -187,7 +189,7 @@ func (gpg *Gnupg) ChangePasskey(keyid, oldpasskey, newpasskey string) error {
 	buffer.WriteString("save\n")
 	input := buffer.String()
 
-	chunks, _, err :=gpg.ExecCommand(args, input)
+	chunks, _, err := gpg.ExecCommand(args, input)
 
 	if err != nil {
 		fmt.Println("ERROR", err)

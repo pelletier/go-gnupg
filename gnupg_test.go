@@ -30,7 +30,6 @@ func TestGnupgCreateKeys(t *testing.T) {
 	}
 }
 
-
 func TestGnupgChangePasskey(t *testing.T) {
 	gpg, _ := InitGnupg()
 	line, e := gpg.CreateKeyPair(1024, "me2@foo.com", "myname", "comment", "qweqwe")
