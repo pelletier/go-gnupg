@@ -2,7 +2,7 @@
 
 A simple wrapper around the [GnuPG](https://www.gnupg.org/) binary.
 
-[![Build Status](https://travis-ci.org/pelletier/go-gnupg.png?branch=master)](https://travis-ci.org/pelletier/go-gnupg)
+[![Build Status](https://img.shields.io/travis/pelletier/go-gnupg.svg?style=flat-square)](https://travis-ci.org/pelletier/go-gnupg)
 
 ## Import
 
