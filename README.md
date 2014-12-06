@@ -3,6 +3,8 @@
 A simple wrapper around the [GnuPG](https://www.gnupg.org/) binary.
 
 [![Build Status](https://img.shields.io/travis/pelletier/go-gnupg.svg?style=flat-square)](https://travis-ci.org/pelletier/go-gnupg)
+[![Documentation](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/pelletier/go-gnupg)
+[![License](https://img.shields.io/badge/license-MIT-lightgrey.svg?style=flat-square)](http://en.wikipedia.org/wiki/MIT_License)
 
 ## Import
 
