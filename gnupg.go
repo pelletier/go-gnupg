@@ -26,14 +26,18 @@ type OutputChunk struct {
 
 // Builds a Gnupg object and initializes with sane defaults.
 func InitGnupg() (*Gnupg, error) {
-	gpg := new(Gnupg)
 	path, err := exec.LookPath("gpg")
 	if err != nil {
 		return nil, errors.New("gpg binary not found")
 	}
-	gpg.Binary = path
-	gpg.Homedir = "~/.gnupg" // there may be a smarter way to initialize that
+	return InitGnupgWithBinaryPath(path)
+}
 
+// Builds a Gnupg object and initializes it with a given gpg binary.
+func InitGnupgWithBinaryPath(binpath string) (*Gnupg, error) {
+	gpg := new(Gnupg)
+	gpg.Binary = binpath
+	gpg.Homedir = "~/.gnupg" // there may be a smarter way to initialize that
 	return gpg, nil
 }
 
@@ -161,4 +165,35 @@ func (gpg *Gnupg) DeleteKeys(keyids ...string) error {
 		return err
 	}
 	return gpg.DeletePublicKey(keyids...)
+}
+
+// Change the passkey of a private key
+func (gpg *Gnupg) ChangePasskey(keyid, oldpasskey, newpasskey string) error {
+	args := append([]string{"--command-fd", "0",
+							"--passphrase-repeat", "0",
+							"--edit-key", keyid,})
+
+	var buffer bytes.Buffer
+	buffer.WriteString("passwd\n")
+	buffer.WriteString(oldpasskey)
+	buffer.WriteString("\n")
+	buffer.WriteString(newpasskey)
+	buffer.WriteString("\n")
+	buffer.WriteString("save\n")
+	input := buffer.String()
+
+	chunks, _, err :=gpg.ExecCommand(args, input)
+
+	if err != nil {
+		fmt.Println("ERROR", err)
+		return err
+	}
+
+	for _, chunk := range chunks {
+		if chunk.Key == "BAD_PASSPHRASE" {
+			return errors.New("Bad old passphrase")
+		}
+	}
+
+	return nil
 }

@@ -22,6 +22,7 @@ pubkey := gpg.ExportPublicKey(keyid)
 privkey := gpg.ExportPrivateKey(keyid)
 fmt.Println(pubkey)
 fmt.Println(privkey)
+gpg.ChangePasskey(keyid, "mypassphrase", "mynewpassphrase")
 ```
 
 See the documentation bellow for all the methods. Also, this is a small library,

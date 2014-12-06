@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+var binpath string = "./gpg"
+
 func TestGnupgInit(t *testing.T) {
 	gpg, err := InitGnupg()
 	if err != nil {
@@ -15,8 +17,15 @@ func TestGnupgInit(t *testing.T) {
 	}
 }
 
+func TestGnupgInitWithBinaryPath(t *testing.T) {
+	_, err := InitGnupgWithBinaryPath(binpath)
+	if err != nil {
+		t.Fatal("Gnupg initialization failed:", err)
+	}
+}
+
 func TestGnupgCreateKeys(t *testing.T) {
-	gpg, _ := InitGnupg()
+	gpg, _ := InitGnupgWithBinaryPath(binpath)
 	line, e := gpg.CreateKeyPair(1024, "me@foo.com", "myname", "comment", "qweqwe")
 	if e != nil {
 		t.Fatal(e)
@@ -27,8 +36,29 @@ func TestGnupgCreateKeys(t *testing.T) {
 	}
 }
 
+
+func TestGnupgChangePasskey(t *testing.T) {
+	gpg, _ := InitGnupgWithBinaryPath(binpath)
+	line, e := gpg.CreateKeyPair(1024, "me2@foo.com", "myname", "comment", "qweqwe")
+	if e != nil {
+		t.Fatal(e)
+	}
+	re := regexp.MustCompile("[A-Z0-9]+")
+	if !re.MatchString(line) {
+		t.Fatalf("%s does not look like a valid key ID", line)
+	}
+	e = gpg.ChangePasskey(line, "qweqwe", "lol")
+	if e != nil {
+		t.Fatal(e)
+	}
+	e = gpg.ChangePasskey(line, "qweqwe", "lol")
+	if e == nil {
+		t.Fatal("Second passkey change should not be successful")
+	}
+}
+
 func TestGnupgExportPublicKey(t *testing.T) {
-	gpg, _ := InitGnupg()
+	gpg, _ := InitGnupgWithBinaryPath(binpath)
 	keyid, _ := gpg.CreateKeyPair(1024, "me@foo.com", "myname", "comment", "qweqwe")
 	pkey, err := gpg.ExportPublicKey(keyid)
 	if err != nil {
@@ -41,7 +71,7 @@ func TestGnupgExportPublicKey(t *testing.T) {
 }
 
 func TestGnupgExportPrivateKey(t *testing.T) {
-	gpg, _ := InitGnupg()
+	gpg, _ := InitGnupgWithBinaryPath(binpath)
 	keyid, _ := gpg.CreateKeyPair(1024, "me@foo.com", "myname", "comment", "qweqwe")
 	pkey, err := gpg.ExportPrivateKey(keyid)
 	if err != nil {
@@ -54,7 +84,7 @@ func TestGnupgExportPrivateKey(t *testing.T) {
 }
 
 func TestGnupgDeletePrivateKey(t *testing.T) {
-	gpg, _ := InitGnupg()
+	gpg, _ := InitGnupgWithBinaryPath(binpath)
 	keyid, _ := gpg.CreateKeyPair(1024, "me@foo.com", "myname", "comment", "qweqwe")
 	err := gpg.DeletePrivateKey(keyid)
 	if err != nil {
@@ -63,7 +93,7 @@ func TestGnupgDeletePrivateKey(t *testing.T) {
 }
 
 func TestGnupgDeletePublicKey(t *testing.T) {
-	gpg, _ := InitGnupg()
+	gpg, _ := InitGnupgWithBinaryPath(binpath)
 	keyid, _ := gpg.CreateKeyPair(1024, "me@foo.com", "myname", "comment", "qweqwe")
 	gpg.DeletePrivateKey(keyid)
 	err := gpg.DeletePublicKey(keyid)
@@ -73,7 +103,7 @@ func TestGnupgDeletePublicKey(t *testing.T) {
 }
 
 func TestGnupgDeleteKeys(t *testing.T) {
-	gpg, _ := InitGnupg()
+	gpg, _ := InitGnupgWithBinaryPath(binpath)
 	keyid, _ := gpg.CreateKeyPair(1024, "me@foo.com", "myname", "comment", "qweqwe")
 	err := gpg.DeleteKeys(keyid)
 	if err != nil {
