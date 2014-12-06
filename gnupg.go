@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -26,8 +27,12 @@ type OutputChunk struct {
 
 // Builds a Gnupg object and initializes with sane defaults.
 func InitGnupg() (*Gnupg, error) {
-	path, err := exec.LookPath("gpg")
-	if err != nil {
+	path := os.Getenv("GNUPG_BIN")
+	var err error = nil
+	if path == "" {
+		path, err = exec.LookPath("gpg")
+	}
+	if err != nil || path == "" {
 		return nil, errors.New("gpg binary not found")
 	}
 	return InitGnupgWithBinaryPath(path)
