@@ -5,7 +5,6 @@ import (
 	"testing"
 )
 
-var binpath string = "./gpg"
 
 func TestGnupgInit(t *testing.T) {
 	gpg, err := InitGnupg()
@@ -101,5 +100,29 @@ func TestGnupgDeleteKeys(t *testing.T) {
 	err := gpg.DeleteKeys(keyid)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestGnupgImportKey(t *testing.T) {
+	gpg, _ := InitGnupg()
+	keyid, _ := gpg.CreateKeyPair(1024, "me@foo.com", "myname", "comment", "qweqwe")
+	privkey, _ := gpg.ExportPrivateKey(keyid)
+	pubkey, _ := gpg.ExportPublicKey(keyid)
+	gpg.DeleteKeys(keyid)
+
+	newKeyid, err := gpg.ImportKey(privkey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newKeyid != keyid {
+		t.Fatal("Different key ids")
+	}
+
+	newKeyid, err = gpg.ImportKey(pubkey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newKeyid != keyid {
+		t.Fatal("Different key ids")
 	}
 }

@@ -149,6 +149,25 @@ func (gpg *Gnupg) ExportPrivateKey(keyid string) (string, error) {
 	return output, nil
 }
 
+// Import key into the keyring
+func (gpg *Gnupg) ImportKey(key string) (string, error) {
+	chunks, _, err := gpg.ExecCommand([]string{"--import"}, key)
+	if err != nil {
+		return "", err
+	}
+	keyid := ""
+	for _, chunk := range chunks {
+		if chunk.Key == "IMPORT_OK" {
+			keyid = strings.Split(chunk.Text, " ")[1]
+			break
+		}
+	}
+	if keyid == "" {
+		return "", errors.New("Unable to import key")
+	}
+	return keyid, nil
+}
+
 // Delete a private key from the keyring.
 func (gpg *Gnupg) DeletePrivateKey(keyids ...string) error {
 	args := append([]string{"--batch", "--delete-secret-keys"}, keyids...)
