@@ -65,12 +65,10 @@ func (gpg *Gnupg) ExecCommand(commands []string, input string) ([]OutputChunk, s
 	cmd.Stdout = &stdout
 	err := cmd.Run()
 
-	if err != nil {
-		return nil, "", errors.New(fmt.Sprint("gpg failed to run: ", err))
-	}
 
 	// XXX Highly not optimised
 	allOutput := string(stderr.Bytes())
+	fmt.Println("STDERR\n", allOutput)
 	lines := strings.Split(allOutput, "\n")
 
 	var chunks = []OutputChunk{}
@@ -86,7 +84,14 @@ func (gpg *Gnupg) ExecCommand(commands []string, input string) ([]OutputChunk, s
 		chunks = append(chunks, chunk)
 	}
 
-	return chunks, string(stdout.Bytes()), nil
+	if err != nil {
+		fmt.Println("ERROR:", err)
+		err = errors.New(fmt.Sprint("gpg failed to run: ", err))
+	}
+
+	fmt.Println("STDOUT\n", stdout.Bytes())
+
+	return chunks, string(stdout.Bytes()), err
 }
 
 // Creates a pair of RSA public and private keys, protected by a passkey.
@@ -151,18 +156,21 @@ func (gpg *Gnupg) ExportPrivateKey(keyid string) (string, error) {
 
 // Import key into the keyring
 func (gpg *Gnupg) ImportKey(key string) (string, error) {
-	chunks, _, err := gpg.ExecCommand([]string{"--import"}, key)
-	if err != nil {
-		return "", err
-	}
+	fmt.Println("IMPORT KEY", key)
+	chunks, out, err := gpg.ExecCommand([]string{"--import"}, key)
+	fmt.Println(out)
 	keyid := ""
 	for _, chunk := range chunks {
+		fmt.Println("CHUNK", chunk.Key, chunk.Text)
 		if chunk.Key == "IMPORT_OK" {
 			keyid = strings.Split(chunk.Text, " ")[1]
 			break
 		}
 	}
 	if keyid == "" {
+		if err != nil {
+			return "", err
+		}
 		return "", errors.New("Unable to import key")
 	}
 	return keyid, nil
