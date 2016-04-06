@@ -19,7 +19,7 @@ import (
 )
 
 gpg, _ := Init.Gnupg()
-keyid := gpg.CreateKeys(2048, "pelletier.thomas@gmail.com", "My Keys", "A set of keys", "mypassphrase")
+keyid := gpg.CreateKeyPair(2048, "pelletier.thomas@gmail.com", "My Keys", "A set of keys", "mypassphrase")
 pubkey := gpg.ExportPublicKey(keyid)
 privkey := gpg.ExportPrivateKey(keyid)
 fmt.Println(pubkey)
